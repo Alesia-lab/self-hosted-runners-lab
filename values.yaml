@@ -1,0 +1,60 @@
+githubConfigUrl: "https://github.com/Alesia-lab"
+githubConfigSecret: arc-github-pat
+
+runnerScaleSetName: "arc-runner-set"
+minRunners: "1"
+maxRunners: "7"
+runnerGroup: "Default"
+runnerLabels:
+  - k8s
+  - arc
+  - dind
+
+labels:
+  app.kubernetes.io/part-of: arc
+  app.kubernetes.io/component: runners
+
+containerMode:
+  type: "dind"
+
+  dindVolumeClaim:
+    accessModes: ["ReadWriteOnce"]
+    storageClassName: "gp2"
+    resources:
+      requests:
+        storage: "20Gi"
+
+  dindResources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+template:
+  spec:
+    serviceAccountName: default
+    nodeSelector:
+      kubernetes.io/os: linux
+    containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        env:
+          - name: DOCKER_BUILDKIT
+            value: "1"
+          - name: DOCKER_HOST
+            value: "unix:///var/run/docker.sock"
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+
+# kubectl create namespace arc-systems
+# kubectl create namespace arc-runners
+# helm install arc --namespace arc-systems --create-namespace oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set-controller
+# kubectl -n arc-runners create secret generic arc-github-pat --from-literal=github_token='XXXXXXXXXXXXXXXXXXXXXXX'
+# helm install arc-runner-set --namespace arc-runners -f values.yaml oci://ghcr.io/actions/actions-runner-controller-charts/gha-runner-scale-set
